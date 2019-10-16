@@ -11,5 +11,9 @@
             "Lib\\": "classes\\"
         }
     },
-    "require": {}
+    "require": {
+        "php": "^7.0",
+        "ext-gd": "*",
+        "ext-mbstring": "*"
+    }
 }
