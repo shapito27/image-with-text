@@ -20,7 +20,7 @@ $leftRightPadding = $getimagesize[0] / 20;
 $onePunct = 1.338;
 $textFontSize = 25;
 
-/** @var float $heightOneLineText высота одной строки текста*/
+/** @var float $heightOneLineText высота одной строки текста */
 $heightOneLineText = $onePunct * $textFontSize;
 //die();
 
@@ -33,7 +33,6 @@ $fontPath = 'font/merriweatherregular.ttf';
 // Set Text to Be Printed On Image
 $text = "Почему важно вовремя обратиться к опытному адвокату";//"Взыскание долга";//"Взыскание долга, неустойки, дебиторской задолженности";
 $text = mb_strtoupper($text);
-var_dump($text);
 
 $imageWidthWithoutPadings = $getimagesize[0] - $leftRightPadding * 2;
 /**
@@ -53,17 +52,17 @@ function getTextLine(string $text, int $widthOneLineText, int $imageWidthWithout
     $previousText = '';
     //массив слов текста
     $wordsList = explode(' ', $text);
-var_dump($text);
+
     //если в тексте осталось одно слово
-    if(count($wordsList) === 1){
+    if (count($wordsList) === 1) {
         return $text;
     }
 
     // находим максимальную ширину текста, чтобы вписалась в пространство
-    do{
+    do {
         $previousText = $curText;
         //если длина строки еще маленькая, а слова в тексте уже закончились
-        if(count($wordsList) === 0){
+        if (count($wordsList) === 0) {
             break;
         }
 
@@ -113,7 +112,7 @@ if ($widthOneLineText > $imageWidthWithoutPadings) {
     /** @var array $resultLines текст разбитый на список строк, которые поместятся на картинку */
     $resultLines = [];
     $curentLine = 0;
-    while($text !== ''){
+    while ($text !== '') {
         //очищаем от пробелов по бокам
         $text = trim($text);
         //получаем строчку, которая поместится по ширине, сохраняем в масси
@@ -135,10 +134,10 @@ if ($widthOneLineText > $imageWidthWithoutPadings) {
 
     // находим левый верхнюю точку откуда начинать вставлять строчки
     $x = $leftRightPadding;
-    $y = $getimagesize[1] / 2 - $heightMultiLineText / 2;
+    $y = $getimagesize[1] / 2 - $heightMultiLineText / 2 + $heightOneLineText;
 
     //рассчитываем координаты каждой строчки и выводим
-    foreach ($resultLines as $resultLine){
+    foreach ($resultLines as $resultLine) {
         imagettftext($jpgImage, $textFontSize, 0, $x, $y, $white, $fontPath, $resultLine);
         $y = $y + $heightOneLineText + $textLinesPadding;
     }
