@@ -3,8 +3,22 @@
 header('Content-type: image/jpeg');
 
 $imagePath = './images/source/law_min.jpg';
+$resultImagePath = './images/result/law_min.jpg';
 // Create Image From Existing File
 $jpgImage = imagecreatefromjpeg($imagePath);
+
+const COEFICENT_LEFT_RIGHT_TEXT_PADDING = 20;
+/** @var float 1 punct of font size */
+const ONE_PUNCT_IN_PIXELS = 1.338;
+const TEXT_FONT_SIZE = 25;
+/**
+ * Text color red green blue
+ */
+const TEXT_COLOR_RED = 255;
+const TEXT_COLOR_GREEN = 255;
+const TEXT_COLOR_BLUE = 255;
+
+const TEXT_LINES_TOP_BOTTOM_PADDING = 15;// по умолчанию сделать процент от шрифта, но также дать возможность менять
 
 /**
  * @var array $getimagesize - размер изображения
@@ -13,19 +27,17 @@ $jpgImage = imagecreatefromjpeg($imagePath);
  */
 $getimagesize = getimagesize($imagePath);
 /** @var float $leftRightPadding левый и правый отступы текста внутри картинки */
-$leftRightPadding = $getimagesize[0] / 20;
+$leftRightPadding = $getimagesize[0] / COEFICENT_LEFT_RIGHT_TEXT_PADDING;
 
 
-/** @var float $onePunct 1punct of font size */
-$onePunct = 1.338;
-$textFontSize = 25;
+
 
 /** @var float $heightOneLineText высота одной строки текста */
-$heightOneLineText = $onePunct * $textFontSize;
+$heightOneLineText = ONE_PUNCT_IN_PIXELS * TEXT_FONT_SIZE;
 //die();
 
 // Allocate A Color For The Text
-$white = imagecolorallocate($jpgImage, 255, 255, 255);
+$white = imagecolorallocate($jpgImage, TEXT_COLOR_RED, TEXT_COLOR_GREEN, TEXT_COLOR_BLUE);
 
 // Set Path to Font File
 $fontPath = 'font/merriweatherregular.ttf';
@@ -97,7 +109,7 @@ function calculateOneLineText(string $text, int $textFontSize, string $fontPath)
     return abs($bbox[2] - $bbox[0]);
 }
 
-$widthOneLineText = calculateOneLineText($text, $textFontSize, $fontPath);
+$widthOneLineText = calculateOneLineText($text, TEXT_FONT_SIZE, $fontPath);
 
 /**
  * Если текст слишком длинный, то делим текст по пробелам и получаем длинну каждой части
@@ -115,7 +127,7 @@ if ($widthOneLineText > $imageWidthWithoutPadings) {
         //очищаем от пробелов по бокам
         $text = trim($text);
         //получаем строчку, которая поместится по ширине, сохраняем в масси
-        $resultLines[$curentLine] = getTextLine($text, $imageWidthWithoutPadings, $textFontSize, $fontPath);
+        $resultLines[$curentLine] = getTextLine($text, $imageWidthWithoutPadings, TEXT_FONT_SIZE, $fontPath);
         //удаляем из общего текста найденную подстроку
         $text = str_replace($resultLines[$curentLine], '', $text);
         ++$curentLine;
@@ -123,13 +135,12 @@ if ($widthOneLineText > $imageWidthWithoutPadings) {
     //сколько получилось строчек после разбивки тектста
     $numberOfLines = count($resultLines);
     //отступ между текстами
-    $textLinesPadding = 15;// сделать процент от шрифта.....
 
     /**
      * 1 Cчитаем высоту текста по большой букве
      * 2. считаем отступы между строк
      */
-    $heightMultiLineText = $numberOfLines * $heightOneLineText + $textLinesPadding * ($numberOfLines - 1);
+    $heightMultiLineText = $numberOfLines * $heightOneLineText + TEXT_LINES_TOP_BOTTOM_PADDING * ($numberOfLines - 1);
 
     // находим левый верхнюю точку откуда начинать вставлять строчки
     $x = $leftRightPadding;
@@ -137,8 +148,8 @@ if ($widthOneLineText > $imageWidthWithoutPadings) {
 
     //рассчитываем координаты каждой строчки и выводим
     foreach ($resultLines as $resultLine) {
-        imagettftext($jpgImage, $textFontSize, 0, $x, $y, $white, $fontPath, $resultLine);
-        $y += $heightOneLineText + $textLinesPadding;
+        imagettftext($jpgImage, TEXT_FONT_SIZE, 0, $x, $y, $white, $fontPath, $resultLine);
+        $y += $heightOneLineText + TEXT_LINES_TOP_BOTTOM_PADDING;
     }
 } else {
     /**
@@ -148,11 +159,11 @@ if ($widthOneLineText > $imageWidthWithoutPadings) {
     $y = $getimagesize[1] / 2 + $heightOneLineText / 2;
 
     // Print Text On Image
-    imagettftext($jpgImage, $textFontSize, 0, $x, $y, $white, $fontPath, $text);
+    imagettftext($jpgImage, TEXT_FONT_SIZE, 0, $x, $y, $white, $fontPath, $text);
 }
 
 // Send Image to Browser
-imagejpeg($jpgImage, './images/result/law_min.jpg');
+imagejpeg($jpgImage, $resultImagePath);
 
 // Clear Memory
 imagedestroy($jpgImage);
