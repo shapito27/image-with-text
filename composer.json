@@ -1,18 +1,18 @@
 {
-    "name": "php-developer/phpstorm-projects",
+    "name": "ruslan/create-image-source",
     "authors": [
         {
-            "name": "Руслан Сайфуллин",
+            "name": "Ruslan Saifullin",
             "email": "legionerust@yandex.ru"
         }
     ],
     "autoload": {
         "psr-4": {
-            "Lib\\": "classes\\"
+            "App\\": "app/"
         }
     },
     "require": {
-        "php": "^7.0",
+        "php": "^7.1",
         "ext-gd": "*",
         "ext-mbstring": "*"
     }
