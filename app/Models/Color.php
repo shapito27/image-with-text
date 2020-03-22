@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Models;
+namespace Shapito27\ImageCreator\Models;
 
 /**
  * Class Color
- * @package App\Models
+ * @package Shapito27\ImageCreator\Models
  */
 class Color
 {

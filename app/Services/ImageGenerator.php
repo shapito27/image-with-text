@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services;
+namespace Shapito27\ImageCreator\Services;
 
-use App\Models\Color;
+use Shapito27\ImageCreator\Models\Color;
 use RuntimeException;
 
 /**
  * Class ImageGenerator
- * @package App\Services
+ * @package Shapito27\ImageCreator\Services
  */
 class ImageGenerator
 {
@@ -83,7 +83,12 @@ class ImageGenerator
                 //очищаем от пробелов по бокам
                 $text = trim($text);
                 //получаем строчку, которая поместится по ширине, сохраняем в масси
-                $resultLines[$curentLine] = $this->getTextLine($text, $imageWidthWithoutPadings, $this->getTextFontSize(), $fontPath);
+                $resultLines[$curentLine] = $this->getTextLine(
+                    $text,
+                    $imageWidthWithoutPadings,
+                    $this->getTextFontSize(),
+                    $fontPath
+                );
                 //удаляем из общего текста найденную подстроку
                 $text = str_replace($resultLines[$curentLine], '', $text);
                 ++$curentLine;
@@ -96,7 +101,8 @@ class ImageGenerator
              * 1 Cчитаем высоту текста по большой букве
              * 2. считаем отступы между строк
              */
-            $heightMultiLineText = $numberOfLines * $heightOneLineText + $this->getTextLinesTopBottomPadding() * ($numberOfLines - 1);
+            $heightMultiLineText = $numberOfLines * $heightOneLineText + $this->getTextLinesTopBottomPadding()
+                                                                         * ($numberOfLines - 1);
 
             // находим левый верхнюю точку откуда начинать вставлять строчки
             $x = $leftRightPadding;
@@ -122,10 +128,11 @@ class ImageGenerator
     }
 
     /**
-     * @param  resource $image
+     * @param  resource  $image
      */
-    private function saveImageToFile($image):void
+    private function saveImageToFile($image): void
     {
+        //@todo take care about all formats. Not only jpeg
         imagejpeg($image, $this->getResultImagePath(), $this->getImageQuality());
         // Clear Memory
         imagedestroy($image);
@@ -136,23 +143,23 @@ class ImageGenerator
      */
     private function validateParams()
     {
-        if(empty($this->getSourceImagePath())) {
+        if (empty($this->getSourceImagePath())) {
             throw new RuntimeException('Source image path is not set');
         }
 
-        if(empty($this->getResultImagePath())) {
+        if (empty($this->getResultImagePath())) {
             throw new RuntimeException('Result image path is not set');
         }
 
-        if(empty($this->getText())) {
+        if (empty($this->getText())) {
             throw new RuntimeException('Text is not set');
         }
 
-        if(empty($this->getCoeficientLeftRightTextPadding())) {
+        if (empty($this->getCoeficientLeftRightTextPadding())) {
             throw new RuntimeException('Coeficient Left and Right Text Padding is not set');
         }
 
-        if(empty($this->getFontPath())) {
+        if (empty($this->getFontPath())) {
             throw new RuntimeException('Text font is not set');
         }
 
@@ -171,11 +178,15 @@ class ImageGenerator
      *
      * @return string
      */
-    private function getTextLine(string $text, int $imageWidthWithoutPadings, int $textFontSize, string $fontPath): string
-    {
+    private function getTextLine(
+        string $text,
+        int $imageWidthWithoutPadings,
+        int $textFontSize,
+        string $fontPath
+    ): string {
         // сюда копим словам вытаскивая по одному из начала текста, потом проверяем поместятся или нет
-        $resultLine   = [];
-        $curText      = '';
+        $resultLine = [];
+        $curText = '';
         $previousText = '';
         //массив слов текста
         $wordsList = explode(' ', $text);
