@@ -6,7 +6,7 @@ use Shapito27\ImageCreator\Services\ImageGenerator;
 use Shapito27\ImageCreator\Models\Color;
 
 $resultImagePath     = 'images/result/law2.jpg';
-$resultImageFullPath = __DIR__ . DIRECTORY_SEPARATOR . $resultImageFullPath;
+$resultImageFullPath = __DIR__ . DIRECTORY_SEPARATOR . $resultImagePath;
 $imageGenerator      = new ImageGenerator();
 $result              = $imageGenerator
     ->setSourceImagePath(__DIR__ . '/images/source/law.jpg')
