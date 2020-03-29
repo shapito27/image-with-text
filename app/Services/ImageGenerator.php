@@ -44,14 +44,18 @@ class ImageGenerator
         $jpgImage = $this->createImageResourceFromExistingFile();
 
         /**
-         * @var array $getimagesize - размер изображения
+         * @var array $imageSize - размер изображения
          * [0] - width
          * [1] - height
          */
-        $getimagesize = getimagesize($this->sourceImagePath);
+        $imageSize = getimagesize($this->sourceImagePath);
         /** @var float $leftRightPadding левый и правый отступы текста внутри картинки */
-        $leftRightPadding = $getimagesize[0] / $this->getCoeficientLeftRightTextPadding();
+        $leftRightPadding = $imageSize[0] / $this->getCoeficientLeftRightTextPadding();
 
+        if($this->getTextFontSize() === null) {
+            //calculate optimal font size
+            $this->setTextFontSize($this->calculateOptimalFontSize($imageSize[1]));
+        }
 
         /** @var float $heightOneLineText высота одной строки текста */
         $heightOneLineText = self::ONE_PUNCT_IN_PIXELS * $this->getTextFontSize();
@@ -63,7 +67,7 @@ class ImageGenerator
 
         $text = $this->getText();
 
-        $imageWidthWithoutPadings = $getimagesize[0] - $leftRightPadding * 2;
+        $imageWidthWithoutPadings = $imageSize[0] - $leftRightPadding * 2;
 
         $widthOneLineText = $this->calculateOneLineText($text, $this->getTextFontSize(), $fontPath);
 
@@ -106,7 +110,7 @@ class ImageGenerator
 
             // находим левый верхнюю точку откуда начинать вставлять строчки
             $x = $leftRightPadding;
-            $y = $getimagesize[1] / 2 - $heightMultiLineText / 2 + $heightOneLineText;
+            $y = $imageSize[1] / 2 - $heightMultiLineText / 2 + $heightOneLineText;
 
             //рассчитываем координаты каждой строчки и выводим
             foreach ($resultLines as $resultLine) {
@@ -117,8 +121,8 @@ class ImageGenerator
             /**
              * Одна строка и она умещается. Считаем левый нижний угол прямоугольника с текстом
              */
-            $x = $getimagesize[0] / 2 - $widthOneLineText / 2;
-            $y = $getimagesize[1] / 2 + $heightOneLineText / 2;
+            $x = $imageSize[0] / 2 - $widthOneLineText / 2;
+            $y = $imageSize[1] / 2 + $heightOneLineText / 2;
 
             // Print Text On Image
             imagettftext($jpgImage, $this->getTextFontSize(), 0, $x, $y, $white, $fontPath, $text);
@@ -185,8 +189,8 @@ class ImageGenerator
         string $fontPath
     ): string {
         // сюда копим словам вытаскивая по одному из начала текста, потом проверяем поместятся или нет
-        $resultLine = [];
-        $curText = '';
+        $resultLine   = [];
+        $curText      = '';
         $previousText = '';
         //массив слов текста
         $wordsList = explode(' ', $text);
@@ -425,5 +429,22 @@ class ImageGenerator
         $this->text = mb_strtoupper($text);
 
         return $this;
+    }
+
+    /**
+     * @param  int  $imageHeight
+     *
+     * @return float
+     */
+    protected function calculateOptimalFontSize(int $imageHeight):float
+    {
+        //koeficent ro reduce text font size
+        $koeficent = 11;
+
+        if (mb_strlen($this->getText()) > 36) {
+            $koeficent = 13;
+        }
+
+        return ($imageHeight / $koeficent) / self::ONE_PUNCT_IN_PIXELS;
     }
 }
