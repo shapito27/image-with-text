@@ -15,16 +15,22 @@ use Shapito27\ImageCreator\Models\Color;
  **/
 
 //to add menu item
-add_action( 'admin_menu', 'generate_image_menu' );
+add_action('admin_menu', 'generate_image_menu');
 
 /**
  * add page to admin panel menu
  */
-function generate_image_menu():void
+function generate_image_menu(): void
 {
-    add_options_page( 'Generate Image Options', 'Generate Image', 'manage_options', 'my-unique-identifier', 'generate_image_options' );
+    add_options_page(
+        'Generate Image Options',
+        'Generate Image',
+        'manage_options',
+        'my-unique-identifier',
+        'generate_image_options'
+    );
     //call register settings function
-    add_action( 'admin_init', 'register_generate_image_settings' );
+    add_action('admin_init', 'register_generate_image_settings');
 }
 
 /**
@@ -33,7 +39,8 @@ function generate_image_menu():void
 function register_generate_image_settings()
 {
     //register  settings
-    register_setting( 'generate_image_settings-group', 'posts_number' );
+    register_setting('generate_image_settings-group', 'posts_number');
+    register_setting('generate_image_settings-group', 'background_image_id');
 }
 
 /**
@@ -41,77 +48,112 @@ function register_generate_image_settings()
  */
 function generate_image_options()
 {
-    if ( !current_user_can( 'manage_options' ) )  {
-        wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+    if (!current_user_can('manage_options')) {
+        wp_die(__('You do not have sufficient permissions to access this page.'));
     }
-?>
+
+    wp_enqueue_media();
+    // Enqueue custom script that will interact with wp.media
+    wp_enqueue_script('myprefix_script', plugins_url('/wp_js/main.js', __FILE__), array('jquery'), '0.1');
+    ?>
 
     <div class="wrap">
-<h1>Generate image</h1>
-<h2>Set up options</h2>
+        <h1>Generate image</h1>
+        <h2>Set up options</h2>
 
-<form method="post" action="options.php">
-    <?php settings_fields( 'generate_image_settings-group' ); ?>
-    <?php do_settings_sections( 'generate_image_settings-group' ); ?>
-    <table class="form-table">
-        <tr valign="top">
-        <th scope="row">Number of posts</th>
-        <td><input type="text" name="posts_number" value="<?php echo esc_attr( get_option('posts_number') ); ?>" /></td>
-        </tr>
-<!---->
-<!--        <tr valign="top">-->
-<!--        <th scope="row">Some Other Option</th>-->
-<!--        <td><input type="text" name="some_other_option" value="--><?php //echo esc_attr( get_option('some_other_option') ); ?><!--" /></td>-->
-<!--        </tr>-->
-<!---->
-<!--        <tr valign="top">-->
-<!--        <th scope="row">Options, Etc.</th>-->
-<!--        <td><input type="text" name="option_etc" value="--><?php //echo esc_attr( get_option('option_etc') ); ?><!--" /></td>-->
-<!--        </tr>-->
-    </table>
+        <form method="post" action="options.php">
+            <?php settings_fields('generate_image_settings-group'); ?>
+            <?php do_settings_sections('generate_image_settings-group'); ?>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">Number of posts to update at once</th>
+                    <td><input type="text" name="posts_number" id="posts_number"
+                               value="<?php echo esc_attr(get_option('posts_number')); ?>"/></td>
+                </tr>
 
-    <?php submit_button(); ?>
+                <!--        <tr valign="top">-->
+                <!--        <th scope="row">Background image</th>-->
+                <!--        <td>-->
+                <!--           -->
+                <!--        </td>-->
+                <!--        </tr>-->
+                <!---->
+                <!--        <tr valign="top">-->
+                <!--        <th scope="row">Options, Etc.</th>-->
+                <!--        <td><input type="text" name="option_etc" value="-->
+                <?php //echo esc_attr( get_option('option_etc') );
+                ?><!--" /></td>-->
+                <!--        </tr>-->
+            </table>
 
-</form>
-</div>
-<?php
+            <?php submit_button(); ?>
+
+        </form>
+
+    </div>
+    <div class="wrap">
+        <h2>Background image</h2>
+        <?php
+        $image_id = get_option('background_image_id');
+        if (intval($image_id) > 0) {
+            // Change with the image size you want to use
+            $image = wp_get_attachment_image($image_id, 'medium', false, array('id' => 'myprefix-preview-image'));
+        } else {
+            // Some default image
+            $image = '<img id="myprefix-preview-image" src="" />';
+        }
+
+        echo $image;
+        ?>
+        <br>
+        <input type="hidden" name="background_image_id" id="background_image_id"
+               value="<?php echo esc_attr($image_id); ?>" class="regular-text"/>
+        <input type='button' class="button-primary" value="<?php esc_attr_e('Select a image', 'generate_image'); ?>"
+               id="background_image_media_manager"/>
+    </div>
+
+    <div class="wrap">
+        <h2>Run image generation</h2>
+        <h3>Take first <?php echo esc_attr(get_option('posts_number')); ?> and generate images.</h3>
+        <br>
+        <input type='button' class="button-primary" value="<?php esc_attr_e('Generate', 'generate_image'); ?>"
+               id="run-generation"/>
+        <div id="generated-images-wrap"></div>
+    </div>
+    <?php
 }
 
+// Ajax action to refresh the user image
+add_action('wp_ajax_myprefix_get_image', 'myprefix_get_image');
+
+function myprefix_get_image()
+{
+    $attachmentId = (int)$_GET['id'];
+    if (isset($attachmentId) && is_int($attachmentId)) {
+        $image = wp_get_attachment_image(
+            filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT),
+            'medium',
+            false,
+            array('id' => 'myprefix-preview-image')
+        );
+        $data  = array(
+            'image' => $image,
+        );
+        update_option('background_image_id', $attachmentId);
+        wp_send_json_success($data);
+    } else {
+        wp_send_json_error();
+    }
+}
 
 add_action('wp_ajax_generate_image', 'generate_image');
 
 function generate_image()
 {
-    global $wpdb; // this is how you get access to the database
-
-    $res = 'Good';
     try {
-        $postId = intval($_POST['post_id']);
-        $post   = get_post($postId);
-
-        $resultImagePath     = sprintf("public/images/result/%s.jpg", $post->post_title);
-        $resultImageFullPath = __DIR__ . DIRECTORY_SEPARATOR . $resultImagePath;
-        $imageGenerator      = new ImageGenerator();
-        $result              = $imageGenerator
-            ->setSourceImagePath(__DIR__ . DIRECTORY_SEPARATOR . 'public/images/source/tv.jpg')
-            ->setResultImagePath($resultImageFullPath)
-            ->setFontPath(__DIR__ . DIRECTORY_SEPARATOR . 'public/font/merriweatherregular.ttf')
-            ->setTextColor(new Color(255, 255, 255))
-            ->setText($post->post_title)//"Взыскание долга";//"Взыскание долга, неустойки, дебиторской задолженности";
-            ->setCoeficientLeftRightTextPadding(20)
-            ->setTextLinesTopBottomPadding(15)
-            ->setImageQuality(100)
-            ->generate();
-
-        $attachmentId = saveImageToMedialibrary($resultImageFullPath, $postId);
-        //set post's featured image
-        add_post_meta($postId, '_thumbnail_id', $attachmentId);
-        //set image alt
-        update_post_meta($attachmentId, '_wp_attachment_image_alt', $post->post_title);
-
-        $res = wp_get_attachment_url($attachmentId);
-//    echo '<img src="' . $resultImagePath . '">';
-
+        $postId       = intval($_POST['post_id']);
+        $attachmentId = generateImageByPost($postId);
+        $res          = wp_get_attachment_url($attachmentId);
     } catch (Exception $exception) {
         $res = $exception->getMessage();
     }
@@ -121,13 +163,44 @@ function generate_image()
     wp_die(); // this is required to terminate immediately and return a proper response
 }
 
+function generateImageByPost(int $postId): int
+{
+    global $wpdb; // this is how you get access to the database
+
+    $post = get_post($postId);
+
+    $resultImagePath = sprintf("public/images/result/%s.jpg", fileNameSanitaze($post->post_name));
+//    var_dump([$post, $resultImagePath]);
+//    die();
+    $resultImageFullPath = __DIR__ . DIRECTORY_SEPARATOR . $resultImagePath;
+    $imageGenerator      = new ImageGenerator();
+    $result              = $imageGenerator
+        ->setSourceImagePath(get_attached_file(get_option('background_image_id')))
+        ->setResultImagePath($resultImageFullPath)
+        ->setFontPath(__DIR__ . DIRECTORY_SEPARATOR . 'public/font/merriweatherregular.ttf')
+        ->setTextColor(new Color(255, 255, 255))
+        ->setText($post->post_title)//"Взыскание долга";//"Взыскание долга, неустойки, дебиторской задолженности";
+        ->setCoeficientLeftRightTextPadding(20)
+        ->setTextLinesTopBottomPadding(15)
+        ->setImageQuality(100)
+        ->generate();
+
+    $attachmentId = saveImageToMedialibrary($resultImageFullPath, $postId);
+    //set post's featured image
+    add_post_meta($postId, '_thumbnail_id', $attachmentId);
+    //set image alt
+    update_post_meta($attachmentId, '_wp_attachment_image_alt', $post->post_title);
+
+    return $attachmentId;
+}
+
 ## Добавляем блоки в основную колонку на страницах постов и пост. страниц
 add_action('add_meta_boxes', 'myplugin_add_custom_box');
 function myplugin_add_custom_box()
 {
     $screens = [
         'post',
-//        'page'
+        //        'page'
     ];
     add_meta_box('myplugin_sectionid', 'Generate image', 'myplugin_meta_box_callback', $screens, 'side');
 }
@@ -155,7 +228,7 @@ function myplugin_meta_box_callback($post)
                 });
             });
         });
-    </script> <?php
+    </script><?php
     $html = '<div id="major-publishing-actions" style="overflow:hidden">';
     $html .= '<div id="publishing-action">';
     $html .= '<input type="submit" accesskey="p" tabindex="5" value="Generate" class="button-primary" id="generate_image" name="publish">';
@@ -177,7 +250,7 @@ function saveImageToMedialibrary(string $filePath, int $postId): int
     $filename = basename($filePath);
 
     $upload_file = wp_upload_bits($filename, null, file_get_contents($filePath));
-    if ( !$upload_file['error']) {
+    if (!$upload_file['error']) {
         $wp_filetype   = wp_check_filetype($filename, null);
         $attachment    = array(
             'post_mime_type' => $wp_filetype['type'],
@@ -187,7 +260,7 @@ function saveImageToMedialibrary(string $filePath, int $postId): int
             'post_status'    => 'inherit',
         );
         $attachment_id = wp_insert_attachment($attachment, $upload_file['file'], $postId);
-        if ( !is_wp_error($attachment_id)) {
+        if (!is_wp_error($attachment_id)) {
             require_once(ABSPATH . "wp-admin" . '/includes/image.php');
             $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload_file['file']);
             wp_update_attachment_metadata($attachment_id, $attachment_data);
@@ -196,4 +269,29 @@ function saveImageToMedialibrary(string $filePath, int $postId): int
 
 //    return $upload_file['url'];
     return $attachment_id;
+}
+
+/**
+ * @param  string  $filename
+ *
+ * @return string
+ */
+function fileNameSanitaze(string $filename): string
+{
+    // Remove anything which isn't a word, whitespace, number
+    // or any of the following caracters -_~,;[]().
+    // If you don't need to handle multi-byte characters
+    // you can use preg_replace rather than mb_ereg_replace
+    // Thanks @Łukasz Rysiak!
+    $filename = mb_ereg_replace("([^\w\s\d\-_~,;\[\]\(\).])", '-', $filename);
+    if ($filename === false) {
+        throw new RuntimeException('Problems with sanitize string ' . $filename);
+    }
+    // Remove any runs of periods (thanks falstro!)
+    $filename = mb_ereg_replace("([\.]{2,})", '-', $filename);
+    if ($filename === false) {
+        throw new RuntimeException('Problems with sanitize string ' . $filename);
+    }
+
+    return $filename;
 }

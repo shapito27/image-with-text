@@ -247,7 +247,12 @@ class ImageGenerator
      */
     private function createImageResourceFromExistingFile()
     {
-        return imagecreatefromjpeg($this->sourceImagePath);
+        $sourceImagePath = $this->getSourceImagePath();
+        if (file_exists($sourceImagePath === false)) {
+            throw new RuntimeException(sprintf('Source file doesnt exist: %s', $sourceImagePath));
+        }
+
+        return imagecreatefromjpeg($sourceImagePath);
     }
 
 
@@ -374,6 +379,10 @@ class ImageGenerator
      */
     public function setSourceImagePath(string $sourceImage): self
     {
+        if (file_exists($sourceImage) === false) {
+            throw new RuntimeException(sprintf('Source file doesnt exist: %s', $sourceImage));
+        }
+
         $this->sourceImagePath = $sourceImage;
 
         return $this;
@@ -390,7 +399,7 @@ class ImageGenerator
     /**
      * @return int
      */
-    public function getTextFontSize(): int
+    public function getTextFontSize(): ?int
     {
         return $this->textFontSize;
     }
