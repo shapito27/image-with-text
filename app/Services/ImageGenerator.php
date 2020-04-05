@@ -52,7 +52,7 @@ class ImageGenerator
         /** @var float $leftRightPadding левый и правый отступы текста внутри картинки */
         $leftRightPadding = $imageSize[0] / $this->getCoeficientLeftRightTextPadding();
 
-        if($this->getTextFontSize() === null) {
+        if ($this->getTextFontSize() === null) {
             //calculate optimal font size
             $this->setTextFontSize($this->calculateOptimalFontSize($imageSize[1]));
         }
@@ -435,6 +435,8 @@ class ImageGenerator
      */
     public function setText(string $text): ImageGenerator
     {
+        $text = str_replace(['«', '»'], '"', $text);
+
         $this->text = mb_strtoupper($text);
 
         return $this;
@@ -445,7 +447,7 @@ class ImageGenerator
      *
      * @return float
      */
-    protected function calculateOptimalFontSize(int $imageHeight):float
+    protected function calculateOptimalFontSize(int $imageHeight): float
     {
         //koeficent ro reduce text font size
         $koeficent = 11;

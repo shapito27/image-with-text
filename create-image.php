@@ -71,19 +71,34 @@ function generate_image_options()
                                value="<?php echo esc_attr(get_option('posts_number')); ?>"/></td>
                 </tr>
 
-                <!--        <tr valign="top">-->
-                <!--        <th scope="row">Background image</th>-->
-                <!--        <td>-->
-                <!--           -->
-                <!--        </td>-->
-                <!--        </tr>-->
-                <!---->
-                <!--        <tr valign="top">-->
-                <!--        <th scope="row">Options, Etc.</th>-->
-                <!--        <td><input type="text" name="option_etc" value="-->
-                <?php //echo esc_attr( get_option('option_etc') );
-                ?><!--" /></td>-->
-                <!--        </tr>-->
+                <tr valign="top">
+                    <th scope="row">Background image</th>
+                    <td>
+                        <?php
+                        $image_id = get_option('background_image_id');
+                        if (intval($image_id) > 0) {
+                            // Change with the image size you want to use
+                            $image = wp_get_attachment_image(
+                                $image_id,
+                                'medium',
+                                false,
+                                array('id' => 'myprefix-preview-image')
+                            );
+                        } else {
+                            // Some default image
+                            $image = '<img id="myprefix-preview-image" src="" />';
+                        }
+
+                        echo $image;
+                        ?>
+                        <br>
+                        <input type="hidden" name="background_image_id" id="background_image_id"
+                               value="<?php echo esc_attr($image_id); ?>" class="regular-text"/>
+                        <input type='button' class="button-primary"
+                               value="<?php esc_attr_e('Select a image', 'generate_image'); ?>"
+                               id="background_image_media_manager"/>
+                    </td>
+                </tr>
             </table>
 
             <?php submit_button(); ?>
@@ -92,32 +107,13 @@ function generate_image_options()
 
     </div>
     <div class="wrap">
-        <h2>Background image</h2>
-        <?php
-        $image_id = get_option('background_image_id');
-        if (intval($image_id) > 0) {
-            // Change with the image size you want to use
-            $image = wp_get_attachment_image($image_id, 'medium', false, array('id' => 'myprefix-preview-image'));
-        } else {
-            // Some default image
-            $image = '<img id="myprefix-preview-image" src="" />';
-        }
-
-        echo $image;
-        ?>
-        <br>
-        <input type="hidden" name="background_image_id" id="background_image_id"
-               value="<?php echo esc_attr($image_id); ?>" class="regular-text"/>
-        <input type='button' class="button-primary" value="<?php esc_attr_e('Select a image', 'generate_image'); ?>"
-               id="background_image_media_manager"/>
-    </div>
-
-    <div class="wrap">
         <h2>Run image generation</h2>
-        <h3>Take first <?php echo esc_attr(get_option('posts_number')); ?> and generate images.</h3>
+        <h3>Take first <?php echo esc_attr(get_option('posts_number')); ?> posts and generate images by using background
+            image and Post title.</h3>
         <br>
         <input type='button' class="button-primary" value="<?php esc_attr_e('Generate', 'generate_image'); ?>"
                id="run-generation"/>
+        <br>
         <div id="generated-images-wrap"></div>
     </div>
     <?php
@@ -139,7 +135,6 @@ function myprefix_get_image()
         $data  = array(
             'image' => $image,
         );
-        update_option('background_image_id', $attachmentId);
         wp_send_json_success($data);
     } else {
         wp_send_json_error();
@@ -163,15 +158,19 @@ function generate_image()
     wp_die(); // this is required to terminate immediately and return a proper response
 }
 
+/**
+ * @param  int  $postId
+ *
+ * @return int
+ */
 function generateImageByPost(int $postId): int
 {
-    global $wpdb; // this is how you get access to the database
+//    global $wpdb; // this is how you get access to the database
 
     $post = get_post($postId);
 
     $resultImagePath = sprintf("public/images/result/%s.jpg", fileNameSanitaze($post->post_name));
-//    var_dump([$post, $resultImagePath]);
-//    die();
+
     $resultImageFullPath = __DIR__ . DIRECTORY_SEPARATOR . $resultImagePath;
     $imageGenerator      = new ImageGenerator();
     $result              = $imageGenerator
@@ -194,7 +193,53 @@ function generateImageByPost(int $postId): int
     return $attachmentId;
 }
 
-## Добавляем блоки в основную колонку на страницах постов и пост. страниц
+add_action('wp_ajax_generate_images', 'generate_images');
+
+function generate_images()
+{
+    $count          = (int)$_GET['count'];
+    $res            = null;
+    $res['success'] = false;
+
+    try {
+        $args = array(
+            'meta_query'  => array(
+                array(
+                    'key'     => '_thumbnail_id',
+                    'compare' => 'NOT EXISTS',
+                ),
+            ),
+            'numberposts' => $count,
+        );
+
+        $query = get_posts($args);
+
+        if (count($query) === 0) {
+            throw new RuntimeException("No posts without feature image.");
+        }
+
+        /**
+         * @var WP_Post $post
+         */
+        foreach ($query as $post) {
+            $attachmentId   = generateImageByPost($post->ID);
+            $res['posts'][] = [
+                'title'     => $post->post_title,
+                'url'       => 'https://digit-tv.ru/wp-admin/post.php?post=' . $post->ID . '&action=edit',
+                'image_src' => wp_get_attachment_url($attachmentId),
+            ];
+        }
+        $res['success'] = true;
+    } catch (Exception $exception) {
+        $res['error'] = $exception->getMessage();
+    }
+    //response
+    echo json_encode($res);
+
+    wp_die(); // this is required to terminate immediately and return a proper response
+}
+
+// Добавляем блоки в основную колонку на страницах постов и пост. страниц
 add_action('add_meta_boxes', 'myplugin_add_custom_box');
 function myplugin_add_custom_box()
 {
