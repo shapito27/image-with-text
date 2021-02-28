@@ -1,4 +1,6 @@
 vendor
 .idea
 public/images/result/*
+public/images/source/*
 docker-nginx-php-mysql
+wp_js

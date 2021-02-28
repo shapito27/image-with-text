@@ -16,13 +16,37 @@ class Color
     public $blue = 255;
 
     /**
-     * Color constructor.
+     * Color constructor. Set by hex code
      *
      * @param  int  $red
      * @param  int  $green
      * @param  int  $blue
      */
-    public function __construct(int $red, int $green, int $blue)
+    public function __construct(?string $hexCode)
+    {
+        if ($hexCode !== null) {
+            $this->setByHexCode($hexCode);
+        }
+    }
+
+    /**
+     * Set color by Hex Code
+     *
+     * @param  string  $hexCode
+     */
+    public function setByHexCode(string $hexCode): void
+    {
+        [$this->red, $this->green, $this->blue] = sscanf($hexCode, "#%02x%02x%02x");
+    }
+
+    /**
+     * Set color by RGB absolute values
+     *
+     * @param  int  $red
+     * @param  int  $green
+     * @param  int  $blue
+     */
+    public function setByAbsoluteRGB(int $red, int $green, int $blue): void
     {
         $this->red   = $red;
         $this->green = $green;
