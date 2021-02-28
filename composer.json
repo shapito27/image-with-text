@@ -8,7 +8,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "Shapito27\\ImageCreator\\": "app/"
+            "Shapito27\\ImageCreator\\": "src/"
         }
     },
     "require": {

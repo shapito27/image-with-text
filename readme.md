@@ -1,24 +1,25 @@
-На входе:
+Image with text
+===
 
- -заголовок поста
- -картинка-фон
- 
-На выходе:
+Crate new image from given image and given text. Text will be placed on the image with align.
 
- -картинка с нанесенным текстом(текст должен быть выровнен)
- 
- Алгоритм:
- 1. Узнаем ширину высоту картинки
- 2. По шрифту вычисляев высоту текста.
- 3. Вычисляем длинну текста.
- 4. Сравниваем длинну текста и ширину картинки, Учитываем минимальный оступ от краев картинки(счтить в % от ширины картинки)
- 5. Если текст слишком длинный, то делим текст по пробелам и получаем длинну каждой части
- 6. Выбираем где ставим перенос с учетом того что обе части подходят по ширине
- 7. Если всё еще не помещается, то повторяем п.6
- 8. Если теперь не одна строка текста, то надо расчитать высоту текста и отцентровать
- 
- Плагин для WordPress. Возможности:
- 1. Из настроек плагина:
-    - Картинка для фона
-    - Кол-во постов, обновляемых за раз
- 2. Кнопка генерации на странице редактирования поста
+Example:
+```
+require_once dirname(__DIR__).'/vendor/autoload.php';
+
+use Shapito27\ImageCreator\Services\ImageGenerator;
+use Shapito27\ImageCreator\Models\Color;
+
+$imageGenerator      = new ImageGenerator();
+    $result              = $imageGenerator
+        ->setSourceImagePath('/var/www/exapmple/images/source/test.jpeg')
+        ->setResultImagePath('/var/www/exapmple/images/result/test.jpeg')
+        ->setFontPath('/var/www/exapmple/font/merriweatherregular.ttf')
+        ->setTextColor(new Color('#000000'))
+        ->setTextFontSize(25)
+        ->setText('Test title')
+        ->setCoeficientLeftRightTextPadding(20)
+        ->setTextLinesTopBottomPadding(15)
+        ->setImageQuality(100)
+        ->generate();
+```
