@@ -7,6 +7,7 @@ use RuntimeException;
 
 /**
  * Class ImageGenerator
+ *
  * @package Shapito27\ImageCreator\Services
  */
 class ImageGenerator
@@ -24,21 +25,38 @@ class ImageGenerator
     /** @var Color */
     private $textColor;
     /** @var int */
-    private $coeficientLeftRightTextPadding;
+    private $coefficientLeftRightTextPadding;
     /** @var int */
-    private $textLinesTopBottomPadding;// по умолчанию сделать процент от шрифта, но также дать возможность менять
+    private $textLinesTopBottomPadding;// @todo make percent of font by default. But add ability user to change it in the future
     /** @var int */
     private $imageQuality;
+
+    /** @var bool */
+    private $saveBackup;
+    /** @var string */
+    private $backupImagePath;
 
     /** @var float 1 punct of font size */
     public const ONE_PUNCT_IN_PIXELS = 1.338;
 
-    /**
-     * @return false|resource
-     */
-    public function generate()
+    public function __construct()
+    {
+        $this->setTextColor(new Color(Color::BLACK_COLOR));
+        $this->setFontPath(__DIR__ . '/../../example/font/merriweatherregular.ttf');
+        $this->setCoefficientLeftRightTextPadding(20);
+        $this->setTextLinesTopBottomPadding(15);
+        $this->setImageQuality(100);
+        $this->setSaveBackup(false);
+    }
+
+    public function generate(): void
     {
         $this->validateParams();
+
+        //if need backup source
+        if($this->isSaveBackup() && !copy($this->getSourceImagePath(), $this->backupImagePath)) {
+            throw new RuntimeException('Backup creation is failed.');
+        }
 
         // Create Image From Existing File
         $jpgImage = $this->createImageResourceFromExistingFile();
@@ -50,7 +68,7 @@ class ImageGenerator
          */
         $imageSize = getimagesize($this->sourceImagePath);
         /** @var float $leftRightPadding левый и правый отступы текста внутри картинки */
-        $leftRightPadding = $imageSize[0] / $this->getCoeficientLeftRightTextPadding();
+        $leftRightPadding = $imageSize[0] / $this->getCoefficientLeftRightTextPadding();
 
         if ($this->getTextFontSize() === null) {
             //calculate optimal font size
@@ -72,54 +90,54 @@ class ImageGenerator
         $widthOneLineText = $this->calculateOneLineText($text, $this->getTextFontSize(), $fontPath);
 
         /**
-         * Если текст слишком длинный, то делим текст по пробелам и получаем длинну каждой части
-         * Сравниваем длинну текста и пространство( ширина картинки - левый и правый оступы)
+         * If text too long we split text by whitespace and getting length of each part.
+         * Compare sum of length of each text lines and width of image(including paddings)
          */
         if ($widthOneLineText > $imageWidthWithoutPadings) {
             /**
-             * Делаем массив строк, которые поместятся в выделенную ширину
+             * Make array of strings which will be long enough for image width
              */
             $wordCounter = 0;
-            /** @var array $resultLines текст разбитый на список строк, которые поместятся на картинку */
+            /** @var array $resultLines result split text with lines-strings long enough for picture width */
             $resultLines = [];
-            $curentLine  = 0;
+            $currentLine = 0;
             while ($text !== '') {
-                //очищаем от пробелов по бокам
+                //remove whitespaces at the beginning and end
                 $text = trim($text);
-                //получаем строчку, которая поместится по ширине, сохраняем в масси
-                $resultLines[$curentLine] = $this->getTextLine(
+                //got line, which fit by width and put it to array
+                $resultLines[$currentLine] = $this->getTextLine(
                     $text,
                     $imageWidthWithoutPadings,
                     $this->getTextFontSize(),
                     $fontPath
                 );
-                //удаляем из общего текста найденную подстроку
-                $text = str_replace($resultLines[$curentLine], '', $text);
-                ++$curentLine;
+                //remove string from source text
+                $text = str_replace($resultLines[$currentLine], '', $text);
+                ++$currentLine;
             }
-            //сколько получилось строчек после разбивки тектста
+            //how much lines we got after text split
             $numberOfLines = count($resultLines);
-            //отступ между текстами
 
+            //margins between lines
             /**
-             * 1 Cчитаем высоту текста по большой букве
-             * 2. считаем отступы между строк
+             * 1 Calculate height for string as it uppercase
+             * 2. Calculate strings top/bottom margins
              */
             $heightMultiLineText = $numberOfLines * $heightOneLineText + $this->getTextLinesTopBottomPadding()
-                                                                         * ($numberOfLines - 1);
+                * ($numberOfLines - 1);
 
-            // находим левый верхнюю точку откуда начинать вставлять строчки
+            // try to find left upper coordinate where we start to put strings
             $x = $leftRightPadding;
             $y = $imageSize[1] / 2 - $heightMultiLineText / 2 + $heightOneLineText;
 
-            //рассчитываем координаты каждой строчки и выводим
+            //calculate coordinates of each lines and put it on image
             foreach ($resultLines as $resultLine) {
                 imagettftext($jpgImage, $this->getTextFontSize(), 0, $x, $y, $white, $fontPath, $resultLine);
                 $y += $heightOneLineText + $this->getTextLinesTopBottomPadding();
             }
         } else {
             /**
-             * Одна строка и она умещается. Считаем левый нижний угол прямоугольника с текстом
+             * One string and it long enough. Calculate left lower corner of rectangle with the text
              */
             $x = $imageSize[0] / 2 - $widthOneLineText / 2;
             $y = $imageSize[1] / 2 + $heightOneLineText / 2;
@@ -132,7 +150,7 @@ class ImageGenerator
     }
 
     /**
-     * @param  resource  $image
+     * @param resource $image
      */
     private function saveImageToFile($image): void
     {
@@ -145,104 +163,107 @@ class ImageGenerator
     /**
      * @throws RuntimeException
      */
-    private function validateParams()
+    private function validateParams(): void
     {
         if (empty($this->getSourceImagePath())) {
             throw new RuntimeException('Source image path is not set');
-        }
-
-        if (empty($this->getResultImagePath())) {
-            throw new RuntimeException('Result image path is not set');
         }
 
         if (empty($this->getText())) {
             throw new RuntimeException('Text is not set');
         }
 
-        if (empty($this->getCoeficientLeftRightTextPadding())) {
-            throw new RuntimeException('Coeficient Left and Right Text Padding is not set');
+        if (empty($this->backupImagePath) && $this->isSaveBackup()) {
+            throw new RuntimeException('Backup file is not set');
         }
-
-        if (empty($this->getFontPath())) {
-            throw new RuntimeException('Text font is not set');
-        }
-
-        if (empty($this->getTextLinesTopBottomPadding())) {
-            throw new RuntimeException('Text Lines Top Bottom Padding is not set');
-        }
+//
+//        if ($this->getCoefficientLeftRightTextPadding() === null) {
+//            throw new RuntimeException('Coefficient Left and Right Text Padding is not set');
+//        }
+//
+//        if (empty($this->getFontPath())) {
+//            throw new RuntimeException('Font path is not set');
+//        }
+//
+//        if ($this->getTextLinesTopBottomPadding() === null) {
+//            throw new RuntimeException('Text Lines Top Bottom Padding is not set');
+//        }
     }
 
     /**
-     * Найти первую подходящую по размеру(найболее длинную , но не больше $imageWidthWithoutPadings) часть текста для размещения на картинке
+     * Find first part of text which can be located on image(long enough but no more than $imageWidthWithoutPadings)
      *
-     * @param  string  $text  текст, где будем искать
-     * @param  int  $imageWidthWithoutPadings  ширина картинки с вычето отспупов.
-     * @param  int  $textFontSize  размер шрифта
-     * @param  string  $fontPath  путь к шрифту
+     * @param string $text                      text what need to locate on image
+     * @param int    $imageWidthWithoutPaddings width of image without paddings
+     * @param int    $textFontSize              text font size
+     * @param string $fontPath                  path ot font
      *
      * @return string
      */
     private function getTextLine(
         string $text,
-        int $imageWidthWithoutPadings,
+        int $imageWidthWithoutPaddings,
         int $textFontSize,
         string $fontPath
-    ): string {
-        // сюда копим словам вытаскивая по одному из начала текста, потом проверяем поместятся или нет
-        $resultLine   = [];
-        $curText      = '';
+    ): string
+    {
+        // queue of words. Collect words and then take one by one and check is there enough place for them or not
+        $resultLine = [];
+        $curText = '';
         $previousText = '';
-        //массив слов текста
+
+        //array of words
         $wordsList = explode(' ', $text);
 
-        //если в тексте осталось одно слово
+        //if text has only one word
         if (count($wordsList) === 1) {
             return $text;
         }
 
-        // находим максимальную ширину текста, чтобы вписалась в пространство
+        // try to find maximum width of text fits to place text
         do {
             $previousText = $curText;
-            //если длина строки еще маленькая, а слова в тексте уже закончились
+            //if length of string still small but we run out of words
             if (count($wordsList) === 0) {
                 break;
             }
 
             $resultLine[] = array_shift($wordsList);
-            $curText      = implode(' ', $resultLine);
-        } while ($this->calculateOneLineText($curText, $textFontSize, $fontPath) < $imageWidthWithoutPadings);
+            $curText = implode(' ', $resultLine);
+        } while ($this->calculateOneLineText($curText, $textFontSize, $fontPath) < $imageWidthWithoutPaddings);
 
         return $previousText;
     }
 
     /**
-     * @param  string  $text
-     * @param  int  $textFontSize
-     * @param  string  $fontPath
+     * @param string $text
+     * @param int    $textFontSize
+     * @param string $fontPath
      *
      * @return int
      */
     private function calculateOneLineText(string $text, int $textFontSize, string $fontPath): int
     {
         /**
-         * @var array $bbox создаем рамку для текста. по нему имеем 8 координат - каждой точки.
-         * 0    нижний левый угол, X координата
-         * 1    нижний левый угол, Y координата
-         * 2    нижний правый угол, X координата
-         * 3    нижний правый угол, Y координата
-         * 4    верхний правый угол, X координата
-         * 5    верхний правый угол, Y координата
-         * 6    верхний левый угол, X координата
-         * 7    верхний левый угол, Y координата
+         * @var array $bbox create frame for text. so we have 8 coordinates of the frame
+         * 0    lower left corner, X
+         * 1    lower left corner, Y
+         * 2    lower right corner, X
+         * 3    lower right corner, Y
+         * 4    upper right corner, X
+         * 5    upper right corner, Y
+         * 6    upper left corner, X
+         * 7    upper left corner, Y
          */
         $bbox = imagettfbbox($textFontSize, 0, $fontPath, $text);
 
-        /** @var int $widthOneLineText длина текста в одну строчку */
+        /** @var int $widthOneLineText length of text if we make it in one line */
         return abs($bbox[2] - $bbox[0]);
     }
 
     /**
      * Create Image From Existing File
+     *
      * @return false|resource
      */
     private function createImageResourceFromExistingFile()
@@ -259,19 +280,19 @@ class ImageGenerator
     /**
      * @return int
      */
-    public function getCoeficientLeftRightTextPadding(): int
+    public function getCoefficientLeftRightTextPadding(): ?int
     {
-        return $this->coeficientLeftRightTextPadding;
+        return $this->coefficientLeftRightTextPadding;
     }
 
     /**
-     * @param  int  $coeficientLeftRightTextPadding
+     * @param int $coefficientLeftRightTextPadding
      *
      * @return ImageGenerator
      */
-    public function setCoeficientLeftRightTextPadding(int $coeficientLeftRightTextPadding = 20): ImageGenerator
+    public function setCoefficientLeftRightTextPadding(int $coefficientLeftRightTextPadding = 20): ImageGenerator
     {
-        $this->coeficientLeftRightTextPadding = $coeficientLeftRightTextPadding;
+        $this->coefficientLeftRightTextPadding = $coefficientLeftRightTextPadding;
 
         return $this;
     }
@@ -279,13 +300,13 @@ class ImageGenerator
     /**
      * @return int
      */
-    public function getTextLinesTopBottomPadding(): int
+    public function getTextLinesTopBottomPadding(): ?int
     {
         return $this->textLinesTopBottomPadding;
     }
 
     /**
-     * @param  int  $textLinesTopBottomPadding
+     * @param int $textLinesTopBottomPadding
      *
      * @return ImageGenerator
      */
@@ -305,7 +326,7 @@ class ImageGenerator
     }
 
     /**
-     * @param  int  $imageQuality
+     * @param int $imageQuality
      *
      * @return ImageGenerator
      */
@@ -317,7 +338,7 @@ class ImageGenerator
     }
 
     /**
-     * @param  int  $textFontSize
+     * @param int $textFontSize
      *
      * @return ImageGenerator
      */
@@ -329,7 +350,7 @@ class ImageGenerator
     }
 
     /**
-     * @param  string  $fontPath
+     * @param string $fontPath
      *
      * @return ImageGenerator
      */
@@ -341,15 +362,15 @@ class ImageGenerator
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getSourceImagePath(): string
+    public function getSourceImagePath(): ?string
     {
         return $this->sourceImagePath;
     }
 
     /**
-     * @param  Color  $textColor
+     * @param Color $textColor
      *
      * @return ImageGenerator
      */
@@ -361,7 +382,7 @@ class ImageGenerator
     }
 
     /**
-     * @param  string  $resultImage
+     * @param string $resultImage
      *
      * @return ImageGenerator
      */
@@ -373,7 +394,7 @@ class ImageGenerator
     }
 
     /**
-     * @param  string  $sourceImage
+     * @param string $sourceImage
      *
      * @return $this
      */
@@ -384,6 +405,8 @@ class ImageGenerator
         }
 
         $this->sourceImagePath = $sourceImage;
+        //if user does not set specific path for result image we will use source dir
+        $this->resultImagePath = dirname($sourceImage) . '/result-' . basename($sourceImage);
 
         return $this;
     }
@@ -391,7 +414,7 @@ class ImageGenerator
     /**
      * @return string
      */
-    public function getResultImagePath(): string
+    public function getResultImagePath(): ?string
     {
         return $this->resultImagePath;
     }
@@ -407,7 +430,7 @@ class ImageGenerator
     /**
      * @return string
      */
-    public function getFontPath(): string
+    public function getFontPath(): ?string
     {
         return $this->fontPath;
     }
@@ -423,13 +446,13 @@ class ImageGenerator
     /**
      * @return string
      */
-    public function getText(): string
+    public function getText(): ?string
     {
         return $this->text;
     }
 
     /**
-     * @param  string  $text
+     * @param string $text
      *
      * @return ImageGenerator
      */
@@ -443,19 +466,59 @@ class ImageGenerator
     }
 
     /**
-     * @param  int  $imageHeight
+     * @param int $imageHeight
      *
      * @return float
      */
     protected function calculateOptimalFontSize(int $imageHeight): float
     {
-        //koeficent ro reduce text font size
-        $koeficent = 11;
+        //coefficient ro reduce text font size
+        $coefficient = 11;
 
         if (mb_strlen($this->getText()) > 36) {
-            $koeficent = 13;
+            $coefficient = 13;
         }
 
-        return ($imageHeight / $koeficent) / self::ONE_PUNCT_IN_PIXELS;
+        return ($imageHeight / $coefficient) / self::ONE_PUNCT_IN_PIXELS;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isSaveBackup(): bool
+    {
+        return $this->saveBackup;
+    }
+
+    /**
+     * @param bool $saveBackup
+     *
+     * @return ImageGenerator
+     */
+    public function setSaveBackup(bool $saveBackup): ImageGenerator
+    {
+        $this->saveBackup = $saveBackup;
+        if ($saveBackup === true) {
+            $sourceImagePath = $this->getSourceImagePath();
+            $this->setBackupImagePath(dirname($sourceImagePath) . '/backup/' . basename($sourceImagePath));
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getBackupImagePath(): string
+    {
+        return $this->backupImagePath;
+    }
+
+    /**
+     * @param string $backupImagePath
+     */
+    public function setBackupImagePath(string $backupImagePath): void
+    {
+        $this->backupImagePath = $backupImagePath;
     }
 }

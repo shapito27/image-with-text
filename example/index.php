@@ -6,7 +6,7 @@ use Shapito27\ImageCreator\Services\ImageGenerator;
 use Shapito27\ImageCreator\Models\Color;
 
 $savedFile = [];
-const RESULT_IMAGE_PATH = '/images/result/';
+const RESULT_IMAGE_PATH = 'images/result/';
 
 if (!empty($_FILES) && isset($_POST['submit'])) {
     try {
@@ -33,7 +33,7 @@ if (!empty($_FILES) && isset($_POST['submit'])) {
 <?php
 if (!empty($_POST['text']) && !empty($savedFile)) {
     $resultImagePath     = RESULT_IMAGE_PATH.$savedFile['name'];
-    $resultImageFullPath = __DIR__.$resultImagePath;
+    $resultImageFullPath = __DIR__. '/'.$resultImagePath;
     $imageGenerator      = new ImageGenerator();
     $result              = $imageGenerator
         ->setSourceImagePath($savedFile['path'])
@@ -42,7 +42,7 @@ if (!empty($_POST['text']) && !empty($savedFile)) {
         ->setTextColor(new Color($_POST['text-color']))
         ->setTextFontSize($_POST['text-size'])
         ->setText($_POST['text'])
-        ->setCoeficientLeftRightTextPadding(20)
+        ->setCoefficientLeftRightTextPadding(20)
         ->setTextLinesTopBottomPadding(15)
         ->setImageQuality(100)
         ->generate();

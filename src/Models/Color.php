@@ -15,12 +15,12 @@ class Color
     /** @var int */
     public $blue = 255;
 
+    public const BLACK_COLOR='#000000';
+
     /**
      * Color constructor. Set by hex code
      *
-     * @param  int  $red
-     * @param  int  $green
-     * @param  int  $blue
+     * @param string|null $hexCode
      */
     public function __construct(?string $hexCode)
     {

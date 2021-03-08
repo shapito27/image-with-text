@@ -2,3 +2,5 @@ vendor
 .idea
 docker-nginx-php-mysql
 wp_js
+.phpunit.result.cache
+.env

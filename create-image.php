@@ -179,7 +179,7 @@ function generateImageByPost(int $postId): int
         ->setFontPath(__DIR__ . DIRECTORY_SEPARATOR . 'public/font/merriweatherregular.ttf')
         ->setTextColor(new Color(255, 255, 255))
         ->setText($post->post_title)//"Взыскание долга";//"Взыскание долга, неустойки, дебиторской задолженности";
-        ->setCoeficientLeftRightTextPadding(20)
+        ->setCoefficientLeftRightTextPadding(20)
         ->setTextLinesTopBottomPadding(15)
         ->setImageQuality(100)
         ->generate();
