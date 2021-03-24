@@ -38,11 +38,16 @@ class ImageGenerator
 
     /** @var float 1 punct of font size */
     public const ONE_PUNCT_IN_PIXELS = 1.338;
+    /** @var string  */
+    public const DEFAULT_FONT_PATH = __DIR__ . '/../../example/font/merriweatherregular.ttf';
 
     public function __construct()
     {
         $this->setTextColor(new Color(Color::BLACK_COLOR));
-        $this->setFontPath(__DIR__ . '/../../example/font/merriweatherregular.ttf');
+        if(!file_exists(self::DEFAULT_FONT_PATH)) {
+            throw new RuntimeException('Font file is not exist');
+        }
+        $this->setFontPath(self::DEFAULT_FONT_PATH);
         $this->setCoefficientLeftRightTextPadding(20);
         $this->setTextLinesTopBottomPadding(15);
         $this->setImageQuality(100);
@@ -154,8 +159,34 @@ class ImageGenerator
      */
     private function saveImageToFile($image): void
     {
-        //@todo take care about all formats. Not only jpeg
-        imagejpeg($image, $this->getResultImagePath(), $this->getImageQuality());
+        $mime = mime_content_type($this->getSourceImagePath());
+
+        switch ($mime) {
+            case 'image/png':
+                $quality = round($this->getImageQuality()/10);
+                if (imagepng($image, $this->getResultImagePath(), $quality) === false) {
+                    throw new RuntimeException('Can\'t save ' . $mime . 'image to ' . $this->getResultImagePath() . ' with quality ' . $quality);
+                }
+                break;
+            case 'image/jpg':
+            case 'image/jpeg':
+                if (imagejpeg($image, $this->getResultImagePath(), $this->getImageQuality()) === false) {
+                    throw new RuntimeException('Can\'t save ' . $mime . 'image to ' . $this->getResultImagePath());
+                }
+                break;
+            case 'image/gif':
+                if (imagegif($image, $this->getResultImagePath()) === false) {
+                    throw new RuntimeException('Can\'t save ' . $mime . 'image to ' . $this->getResultImagePath());
+                }
+                break;
+            case 'image/bmp':
+                if (imagebmp($image, $this->getResultImagePath()) === false) {
+                    throw new RuntimeException('Can\'t save ' . $mime . 'image to ' . $this->getResultImagePath());
+                }
+                break;
+            default:
+               throw new RuntimeException('Can\'t save ' . $mime . 'image to ' . $this->getResultImagePath());
+        }
         // Clear Memory
         imagedestroy($image);
     }
@@ -264,7 +295,7 @@ class ImageGenerator
     /**
      * Create Image From Existing File
      *
-     * @return false|resource
+     * @return resource
      */
     private function createImageResourceFromExistingFile()
     {
@@ -273,7 +304,30 @@ class ImageGenerator
             throw new RuntimeException(sprintf('Source file doesnt exist: %s', $sourceImagePath));
         }
 
-        return imagecreatefromjpeg($sourceImagePath);
+        $mime = mime_content_type($sourceImagePath);
+        switch ($mime) {
+            case 'image/png':
+                $image = imagecreatefrompng($sourceImagePath);
+                break;
+            case 'image/jpg':
+            case 'image/jpeg':
+                $image = imagecreatefromjpeg($sourceImagePath);
+                break;
+            case 'image/gif':
+                $image = imagecreatefromgif($sourceImagePath);
+                break;
+            case 'image/bmp':
+                $image = imagecreatefrombmp($sourceImagePath);
+                break;
+            default:
+                throw new RuntimeException("Can't create image resource from unknown mimetype file " . $sourceImagePath);
+        }
+
+        if ($image === false) {
+            throw new RuntimeException("Can't create image resource from file " . $sourceImagePath);
+        }
+
+        return $image;
     }
 
 

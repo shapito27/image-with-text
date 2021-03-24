@@ -1,94 +1,80 @@
-<?php
-
-require_once dirname(__DIR__).'/vendor/autoload.php';
-
-use Shapito27\ImageCreator\Services\ImageGenerator;
-use Shapito27\ImageCreator\Models\Color;
-
-$savedFile = [];
-const RESULT_IMAGE_PATH = 'images/result/';
-
-if (!empty($_FILES) && isset($_POST['submit'])) {
-    try {
-        $savedFile = saveFile($_FILES['image']);
-    } catch (Exception $exception) {
-        print_r($exception);
-        exit;
+<style>
+    #images-wrapper{
+        width: 100%;
+        display: flex;
     }
-}
-?>
-    <form action="" method="post" enctype="multipart/form-data">
-        <label for="image">Image <input type="file" id="image" name="image"></label>
-        <br>
-        <label for="text">Text <input type="text" name="text" id="text"></label>
-        <br>
-        Text settings
-        <br>
-        <label for="text-size">Size <input type="number" name="text-size" id="text-size" value="22"></label>
-        <br>
-        <label for="text-color">Color <input type="color" name="text-color" id="text-color" value="#000000"></label>
-        <br>
-        <input name="submit" type="submit" value="Generate">
-    </form>
-<?php
-if (!empty($_POST['text']) && !empty($savedFile)) {
-    $resultImagePath     = RESULT_IMAGE_PATH.$savedFile['name'];
-    $resultImageFullPath = __DIR__. '/'.$resultImagePath;
-    $imageGenerator      = new ImageGenerator();
-    $result              = $imageGenerator
-        ->setSourceImagePath($savedFile['path'])
-        ->setResultImagePath($resultImageFullPath)
-        ->setFontPath('font/merriweatherregular.ttf')
-        ->setTextColor(new Color($_POST['text-color']))
-        ->setTextFontSize($_POST['text-size'])
-        ->setText($_POST['text'])
-        ->setCoefficientLeftRightTextPadding(20)
-        ->setTextLinesTopBottomPadding(15)
-        ->setImageQuality(100)
-        ->generate();
-    echo '<img src="'.$resultImagePath.'">';
-}
-
-function saveFile(array $file)
-{
-    $target_dir     = __DIR__.'/images/source/';
-    $sourceFileName = basename($file["name"]);
-    $sourceFile     = $target_dir.$sourceFileName;
-    $imageFileType  = strtolower(pathinfo($sourceFile, PATHINFO_EXTENSION));
-    $newFileName    = basename($file["tmp_name"]).'.'.$imageFileType;
-    $resultFile     = $target_dir.$newFileName;
-    var_dump('$imageFileType', $imageFileType);
-    // Check if image file is a actual image or fake image
-    $check = getimagesize($file["tmp_name"]);
-    if ($check === false) {
-        throw new RuntimeException('File is not an image');
+    .images{
+        width: 50%;
     }
+</style>
+<form action="" method="post" enctype="multipart/form-data" id="generate-image">
+    <label for="image">Image <input type="file" id="image" name="image" accept="image/*"
+                                    onchange="loadFile(event)"></label>
+    <br>
+    <label for="text-size">Image quality <input type="number" name="image-quality" id="image-quality" value="100"
+                                                max="100" min="0"></label>
+    <br>
+    <label for="text">Text <input type="text" name="text" id="text"></label>
+    <br>
+    Text settings
+    <br>
+    <label for="text-size">Size <input type="number" name="text-size" id="text-size" value="22"></label>
+    <br>
+    <label for="text-size">Coefficient Left Right Padding, % <input type="number" name="text-coefficient-left-right"
+                                                                    id="text-coefficient-left-right" value="20"></label>
+    <br>
+    <label for="text-size">Coefficient Top Bottom Padding, % <input type="number" name="text-coefficient-top-bottom"
+                                                                    id="text-coefficient-top-bottom" value="15"></label>
+    <br>
+    <label for="text-color">Color <input type="color" name="text-color" id="text-color" value="#000000"></label>
+    <br>
+    <input name="submit" type="submit" value="Generate">
+</form>
+<div>
+    <div id="errors" style="color: #ff2d6f"></div>
+    <div id="images-wrapper">
+        <div class="images"><img id="preview"/></div>
+        <div class="images"><img id="result-image"/></div>
+    </div>
+</div>
 
-    // Check if file already exists
-    if (file_exists($resultFile)) {
-        throw new RuntimeException('Sorry, file '.$resultFile.' already exists.');
-    }
+<script>
+    /**
+     * Show preview
+     */
+    var loadFile = function (event) {
+        var preview = document.getElementById('preview');
+        preview.src = URL.createObjectURL(event.target.files[0]);
+        preview.onload = function () {
+            URL.revokeObjectURL(preview.src) // free memory
+        }
+    };
+</script>
+<script>
+    var form = document.getElementById("generate-image");
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        var xhttp = new XMLHttpRequest();
+        var formData = new FormData(form);
+        // FETCH FILEIST OBJECTS
+        var image = document.getElementById('image').files;
+        xhttp.onreadystatechange = function () {
+            console.log(this);
+            if (this.readyState === 4 && this.status === 200) {
+                try {
+                    var obj = JSON.parse(this.response);
+                    if (obj.status === true) {
+                        document.getElementById('result-image').src = obj.result;
+                    } else {
+                        document.getElementById('errors').innerText = obj.error;
+                    }
+                } catch (error) {
+                    throw Error;
+                }
+            }
+        };
 
-    // Check file size
-    if ($file["size"] > 500000) {
-        throw new RuntimeException('File size more than 500KB');
-    }
-
-    // Allow certain file formats
-    if ($imageFileType !== "jpg" && $imageFileType !== "png" && $imageFileType !== "jpeg"
-        && $imageFileType !== "gif") {
-        throw new RuntimeException(
-            'Sorry, only JPG, JPEG, PNG & GIF files are allowed. File is gotten '.$imageFileType
-        );
-    }
-
-    // Check if $uploadOk is set to 0 by an error
-    if (!move_uploaded_file($file["tmp_name"], $resultFile)) {
-        throw new RuntimeException('Sorry, there was an error uploading your file.');
-    }
-
-    return [
-        'name' => $newFileName,
-        'path' => $resultFile,
-    ];
-}
+        xhttp.open("POST", "/example/endpoint-create-image.php", true);
+        xhttp.send(formData);
+    });
+</script>
