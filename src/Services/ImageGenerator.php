@@ -67,13 +67,13 @@ class ImageGenerator
         $jpgImage = $this->createImageResourceFromExistingFile();
 
         /**
-         * @var array $imageSize - размер изображения
+         * @var array $imageSize - image size
          * [0] - width
          * [1] - height
          */
         $imageSize = getimagesize($this->sourceImagePath);
-        /** @var float $leftRightPadding левый и правый отступы текста внутри картинки */
-        $leftRightPadding = $imageSize[0] / $this->getCoefficientLeftRightTextPadding();
+        /** @var float $leftRightPadding left, right paddings of text inside image */
+        $leftRightPadding = $imageSize[0] / (100 - $this->getCoefficientLeftRightTextPadding());
 
         if ($this->getTextFontSize() === null) {
             //calculate optimal font size
@@ -90,7 +90,7 @@ class ImageGenerator
 
         $text = $this->getText();
 
-        $imageWidthWithoutPadings = $imageSize[0] - $leftRightPadding * 2;
+        $imageWidthWithoutPaddings = $imageSize[0] - $leftRightPadding * 2;
 
         $widthOneLineText = $this->calculateOneLineText($text, $this->getTextFontSize(), $fontPath);
 
@@ -98,7 +98,7 @@ class ImageGenerator
          * If text too long we split text by whitespace and getting length of each part.
          * Compare sum of length of each text lines and width of image(including paddings)
          */
-        if ($widthOneLineText > $imageWidthWithoutPadings) {
+        if ($widthOneLineText > $imageWidthWithoutPaddings) {
             /**
              * Make array of strings which will be long enough for image width
              */
@@ -112,7 +112,7 @@ class ImageGenerator
                 //got line, which fit by width and put it to array
                 $resultLines[$currentLine] = $this->getTextLine(
                     $text,
-                    $imageWidthWithoutPadings,
+                    $imageWidthWithoutPaddings,
                     $this->getTextFontSize(),
                     $fontPath
                 );
