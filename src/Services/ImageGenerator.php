@@ -58,7 +58,7 @@ class ImageGenerator
     {
         $this->validateParams();
 
-        //if need backup source
+        //if you need backup source
         if($this->isSaveBackup() && !copy($this->getSourceImagePath(), $this->backupImagePath)) {
             throw new RuntimeException('Backup creation is failed.');
         }
@@ -72,15 +72,18 @@ class ImageGenerator
          * [1] - height
          */
         $imageSize = getimagesize($this->sourceImagePath);
+        if(empty($imageSize[0] )|| empty($imageSize[1])){
+            throw new RuntimeException('Image width or height is not defined');
+        }
         /** @var float $leftRightPadding left, right paddings of text inside image */
         $leftRightPadding = $imageSize[0] / (100 - $this->getCoefficientLeftRightTextPadding());
 
         if ($this->getTextFontSize() === null) {
             //calculate optimal font size
-            $this->setTextFontSize($this->calculateOptimalFontSize($imageSize[1]));
+            $this->setTextFontSize((int)$this->calculateOptimalFontSize($imageSize[1]));
         }
 
-        /** @var float $heightOneLineText высота одной строки текста */
+        /** высота одной строки текста */
         $heightOneLineText = self::ONE_PUNCT_IN_PIXELS * $this->getTextFontSize();
 
         // Allocate A Color For The Text
@@ -148,7 +151,7 @@ class ImageGenerator
             $y = $imageSize[1] / 2 + $heightOneLineText / 2;
 
             // Print Text On Image
-            imagettftext($jpgImage, $this->getTextFontSize(), 0, $x, $y, $white, $fontPath, $text);
+            imagettftext($jpgImage, $this->getTextFontSize(), 0, (int)$x, (int)$y, (int)$white, $fontPath, $text);
         }
 
         $this->saveImageToFile($jpgImage);
@@ -163,7 +166,10 @@ class ImageGenerator
 
         switch ($mime) {
             case 'image/png':
-                $quality = round($this->getImageQuality()/10);
+                $quality = round($this->getImageQuality() / 10);
+                if ($quality > 9) {
+                    $quality = 9;
+                }
                 if (imagepng($image, $this->getResultImagePath(), $quality) === false) {
                     throw new RuntimeException('Can\'t save ' . $mime . 'image to ' . $this->getResultImagePath() . ' with quality ' . $quality);
                 }
@@ -332,7 +338,7 @@ class ImageGenerator
 
 
     /**
-     * @return int
+     * @return int|null
      */
     public function getCoefficientLeftRightTextPadding(): ?int
     {
@@ -352,7 +358,7 @@ class ImageGenerator
     }
 
     /**
-     * @return int
+     * @return int|null
      */
     public function getTextLinesTopBottomPadding(): ?int
     {
@@ -554,7 +560,11 @@ class ImageGenerator
         $this->saveBackup = $saveBackup;
         if ($saveBackup === true) {
             $sourceImagePath = $this->getSourceImagePath();
-            $this->setBackupImagePath(dirname($sourceImagePath) . '/backup/' . basename($sourceImagePath));
+            $backupDir = dirname($sourceImagePath) . '/backup/';
+            if (!is_dir($backupDir)) {
+                mkdir($backupDir, 0777, true);
+            }
+            $this->setBackupImagePath($backupDir. basename($sourceImagePath));
         }
 
         return $this;

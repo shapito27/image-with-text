@@ -7,10 +7,13 @@
 
 namespace Shapito27\ImageCreator;
 
+use InvalidArgumentException;
 use RuntimeException;
 
 class Helper
 {
+    public const MAX_FILE_SIZE = 500000;
+
     /**
      * Save file from $_FILE array
      * @param array  $file
@@ -20,12 +23,19 @@ class Helper
      */
     public static function saveFile(array $file, string $destination): array
     {
+        if(empty($file["name"])) {
+            throw new InvalidArgumentException('File array doesn\'t contain name');
+        }
+        if(empty($file["tmp_name"])) {
+            throw new InvalidArgumentException('File array doesn\'t contain tmp name');
+        }
         $sourceFileName = basename($file["name"]);
         $sourceFile     = $destination.$sourceFileName;
         $imageFileType  = strtolower(pathinfo($sourceFile, PATHINFO_EXTENSION));
         $newFileName    = basename($file["tmp_name"]).'.'.$imageFileType;
         $resultFile     = $destination.$newFileName;
-        // Check if image file is a actual image or fake image
+        // Check if image file is an actual image or fake image
+
         $check = getimagesize($file["tmp_name"]);
         if ($check === false) {
             throw new RuntimeException('File is not an image');
@@ -37,7 +47,7 @@ class Helper
         }
 
         // Check file size
-        if ($file["size"] > 500000) {
+        if ($file["size"] > self::MAX_FILE_SIZE) {
             throw new RuntimeException('File size more than 500KB');
         }
 
